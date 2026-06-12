@@ -1,4 +1,4 @@
-const CACHE_NAME = "smart-dj-v1";
+const CACHE_NAME = "smart-dj-v3";
 const APP_SHELL = [
   "./",
   "./index.html",

@@ -550,6 +550,7 @@
     let remoteSearchResults = [];
     let searchTimer = null;
     let searchRequestId = 0;
+    let pendingGlobalSearch = null;
     const searchCache = new Map();
 
     function hash(input) {
@@ -705,75 +706,83 @@
     function esc(s) {
       return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
     }
-    function getLocalSuggestions(q) {
-      const localCatalog = dedupe([...playlist, ...wholeCatalog.map(([t,a]) => makeTrack(t,a,"whole"))]);
-      return localCatalog
-        .map(t => ({t, s: tokenScore(q,t)}))
-        .filter(x => x.s > .16)
-        .sort((a,b)=>b.s-a.s)
-        .slice(0,8)
-        .map(x => x.t);
-    }
     function renderSuggestionItems(q, isLoading = false) {
       const box = document.getElementById("suggestions");
-      const local = getLocalSuggestions(q);
-      const merged = dedupe([...local, ...remoteSearchResults]).slice(0,12);
-      if (!merged.length && isLoading) {
+      const appleResults = dedupe(remoteSearchResults).slice(0,18);
+      if (!appleResults.length && isLoading) {
         box.innerHTML = `<div class="suggestion-status">Szukam w Apple Music...</div>`;
         box.classList.add("open");
         return;
       }
-      if (!merged.length) {
-        box.innerHTML = `<div class="suggestion-status">Brak wyników. Naciśnij Enter, aby przeanalizować wpisany tytuł.</div>`;
+      if (!appleResults.length) {
+        box.innerHTML = `<div class="suggestion-status">Apple Music nie zwróciło wyników. Sprawdź internet albo dopisz wykonawcę.</div>`;
         box.classList.add("open");
         return;
       }
-      box.innerHTML = merged.map(t => `<button class="suggestion" type="button" data-id="${t.id}"><span><b>${esc(t.title)}</b><small>${esc(t.artist)}${t.album ? ` · ${esc(t.album)}` : ""}</small></span><span class="badge ${t.source === "playlist" || t.source === "manual" ? "hot" : "aqua"}">${t.source === "apple" ? "Apple" : t.source === "playlist" || t.source === "manual" ? "Playlist" : "Katalog"}</span></button>`).join("");
+      box.innerHTML = appleResults.map(t => `<button class="suggestion" type="button" data-id="${t.id}"><span><b>${esc(t.title)}</b><small>${esc(t.artist)}${t.album ? ` · ${esc(t.album)}` : ""}</small></span><span class="badge aqua">Apple</span></button>`).join("");
       box.classList.add("open");
       box.querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => {
-        const found = merged.find(t => t.id === btn.dataset.id);
+        const found = appleResults.find(t => t.id === btn.dataset.id);
         if (!found) return;
         selectedTrack = found;
         document.getElementById("query").value = `${found.title} - ${found.artist}`;
         box.classList.remove("open");
       }));
     }
-    function searchAppleMusic(q) {
+    function searchAppleStore(q, country, requestId) {
+      return new Promise(resolve => {
+        const callbackName = `smartDjAppleSearch${requestId}${country}`;
+        const script = document.createElement("script");
+        let finished = false;
+        const cleanup = () => {
+          delete window[callbackName];
+          script.remove();
+        };
+        const finish = results => {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timeout);
+          cleanup();
+          resolve(results);
+        };
+        const timeout = setTimeout(() => finish([]), 8000);
+        window[callbackName] = payload => {
+          const results = (payload.results || [])
+            .filter(item => item.trackName && item.artistName)
+            .map(makeAppleTrack);
+          finish(results);
+        };
+        script.onerror = () => finish([]);
+        script.src = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&country=${country}&media=music&entity=song&limit=25&explicit=Yes&callback=${callbackName}`;
+        document.head.appendChild(script);
+      });
+    }
+    function searchAppleMusic(q, force = false) {
       const normalizedQuery = norm(q);
-      if (searchCache.has(normalizedQuery)) {
+      if (!force && searchCache.has(normalizedQuery)) {
         remoteSearchResults = searchCache.get(normalizedQuery);
         renderSuggestionItems(q);
-        return;
+        return Promise.resolve(remoteSearchResults);
       }
+
       const requestId = ++searchRequestId;
-      const callbackName = `smartDjAppleSearch${requestId}`;
-      const script = document.createElement("script");
-      const cleanup = () => {
-        delete window[callbackName];
-        script.remove();
-      };
-      const timeout = setTimeout(() => {
-        if (requestId === searchRequestId) renderSuggestionItems(q);
-        cleanup();
-      }, 7000);
-      window[callbackName] = payload => {
-        clearTimeout(timeout);
-        if (requestId !== searchRequestId) {
-          cleanup();
-          return;
-        }
-        remoteSearchResults = dedupe((payload.results || []).filter(item => item.trackName && item.artistName).map(makeAppleTrack));
-        searchCache.set(normalizedQuery, remoteSearchResults);
-        renderSuggestionItems(q);
-        cleanup();
-      };
-      script.onerror = () => {
-        clearTimeout(timeout);
-        if (requestId === searchRequestId) renderSuggestionItems(q);
-        cleanup();
-      };
-      script.src = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&country=PL&media=music&entity=song&limit=12&explicit=Yes&callback=${callbackName}`;
-      document.head.appendChild(script);
+      pendingGlobalSearch = Promise.all([
+        searchAppleStore(q, "US", requestId),
+        searchAppleStore(q, "PL", requestId),
+        searchAppleStore(q, "GB", requestId)
+      ])
+        .then(storeResults => {
+          if (requestId !== searchRequestId) return [];
+          remoteSearchResults = dedupe(storeResults.flat());
+          searchCache.set(normalizedQuery, remoteSearchResults);
+          renderSuggestionItems(q);
+          return remoteSearchResults;
+        })
+        .catch(() => {
+          if (requestId === searchRequestId) renderSuggestionItems(q);
+          return [];
+        });
+      return pendingGlobalSearch;
     }
     function renderSuggestions() {
       const q = document.getElementById("query").value;
@@ -801,15 +810,34 @@
       return true;
     }
     function findSelected(q) {
-      if (selectedTrack) return selectedTrack;
-      const all = dedupe([...playlist, ...remoteSearchResults, ...wholeCatalog.map(([t,a]) => makeTrack(t,a,"whole"))]);
-      return all.map(t => ({t, s: tokenScore(q,t)})).sort((a,b)=>b.s-a.s)[0]?.t || makeTrack(q, "Unknown artist", "manual");
+      if (selectedTrack && selectedTrack.source === "apple") return selectedTrack;
+      return remoteSearchResults
+        .map(t => ({t, s: tokenScore(q,t)}))
+        .sort((a,b)=>b.s-a.s)[0]?.t || null;
     }
-    function runSearch(event) {
+    async function runSearch(event) {
       event.preventDefault();
       const q = document.getElementById("query").value.trim();
       if (!q) return;
+      const searchButton = document.getElementById("searchButton");
+      const previousLabel = searchButton.textContent;
+      searchButton.disabled = true;
+      searchButton.textContent = "Szukam globalnie...";
+      clearTimeout(searchTimer);
+
+      if (!selectedTrack || tokenScore(q, selectedTrack) < .7) {
+        await searchAppleMusic(q, true);
+      } else if (pendingGlobalSearch) {
+        await pendingGlobalSearch;
+      }
+
       const from = findSelected(q);
+      if (!from) {
+        searchButton.disabled = false;
+        searchButton.textContent = previousLabel;
+        renderSuggestionItems(q);
+        return;
+      }
       selectedTrack = from;
       const wholeTracks = wholeCatalog.map(([t,a]) => makeTrack(t,a,"whole"));
       const playlistMatches = rank(from, playlist, 20);
@@ -819,6 +847,8 @@
       const set5 = buildSet(from, wholeMode ? dedupe([...playlist, ...remoteSearchResults, ...wholeTracks]) : playlist, 5);
       const set10 = buildSet(from, wholeMode ? dedupe([...playlist, ...remoteSearchResults, ...wholeTracks]) : playlist, 10);
       renderResults(from, best, playlistMatches, wholeMatches, active, set5, set10);
+      searchButton.disabled = false;
+      searchButton.textContent = previousLabel;
     }
     function renderResults(from, best, playlistMatches, wholeMatches, active, set5, set10) {
       document.getElementById("empty").style.display = "none";
