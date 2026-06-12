@@ -2,6 +2,19 @@
 
 Kompletna aplikacja webowa do znajdowania płynnych przejść DJ-skich w stylu Apple Music Crossfade: użytkownik wpisuje tytuł albo link, aplikacja analizuje BPM, Camelot key, energię, głośność, nastrój i gatunek, a następnie zwraca ranking następnych utworów.
 
+## Aplikacja online
+
+**https://k3mil.github.io/smart-dj-transition-finder/**
+
+Na iPhonie:
+
+1. Otwórz powyższy link w Safari.
+2. Naciśnij ikonę udostępniania.
+3. Wybierz `Dodaj do ekranu początkowego`.
+4. Naciśnij `Dodaj`.
+
+Po instalacji aplikacja otwiera się w osobnym oknie i zachowuje lokalnie dodane utwory. Globalne podpowiedzi Apple wymagają połączenia z internetem.
+
 ## Funkcje
 
 - `Playlist Match`: rekomendacje tylko z Twojej playlisty zbudowanej ze screenshotów.
