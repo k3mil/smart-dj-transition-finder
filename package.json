@@ -1,0 +1,19 @@
+{
+  "name": "smart-dj-transition-finder",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Apple Music inspired transition finder for playlist and whole-internet discovery.",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @smart-dj/api --filter @smart-dj/web dev",
+    "dev:web": "pnpm --filter @smart-dj/web dev",
+    "dev:api": "pnpm --filter @smart-dj/api dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint"
+  },
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.4"
+}

@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: smart-dj-postgres
+    environment:
+      POSTGRES_USER: smartdj
+      POSTGRES_PASSWORD: smartdj
+      POSTGRES_DB: smartdj
+    ports:
+      - "5432:5432"
+    volumes:
+      - smart_dj_pg:/var/lib/postgresql/data
+      - ./packages/database/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+
+volumes:
+  smart_dj_pg:

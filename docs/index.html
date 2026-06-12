@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#08080a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Smart DJ" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <title>Smart DJ Transition Finder</title>
+  <style>
+    :root {
+      --bg: #08080a;
+      --panel: rgba(255, 255, 255, 0.075);
+      --panel-strong: rgba(255, 255, 255, 0.12);
+      --line: rgba(255, 255, 255, 0.13);
+      --text: #f7f7fb;
+      --muted: rgba(247, 247, 251, 0.58);
+      --dim: rgba(247, 247, 251, 0.38);
+      --hot: #ff2d55;
+      --aqua: #00d1ff;
+      --lime: #b6ff4d;
+      --amber: #ffd166;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        linear-gradient(115deg, rgba(255, 45, 85, 0.18), transparent 34%),
+        linear-gradient(245deg, rgba(0, 209, 255, 0.13), transparent 40%),
+        linear-gradient(135deg, #08080a 0%, #151116 43%, #0d1015 100%);
+    }
+
+    button, input, textarea { font: inherit; }
+
+    .app {
+      width: min(1540px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .glass {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
+      backdrop-filter: blur(24px);
+      border-radius: 10px;
+    }
+
+    .top {
+      position: relative;
+      z-index: 1000;
+      overflow: visible;
+      padding: 18px;
+    }
+
+    .top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(26px, 4vw, 42px); line-height: 1; letter-spacing: 0; }
+    h2 { font-size: 18px; letter-spacing: 0; }
+    h3 { font-size: 15px; letter-spacing: 0; }
+    p { color: var(--muted); font-size: 14px; margin-top: 6px; }
+
+    .mode {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.07);
+      min-height: 48px;
+    }
+
+    .switch {
+      width: 56px;
+      height: 30px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--hot);
+      position: relative;
+      cursor: pointer;
+      padding: 0;
+      transition: .2s ease;
+    }
+
+    .switch[data-whole="true"] { background: var(--aqua); }
+    .switch span {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: white;
+      transition: .2s ease;
+    }
+    .switch[data-whole="true"] span { left: 27px; }
+
+    .search {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      position: relative;
+      z-index: 1001;
+    }
+
+    input, textarea {
+      width: 100%;
+      color: var(--text);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.09);
+      outline: none;
+      border-radius: 8px;
+    }
+
+    input {
+      min-height: 52px;
+      padding: 0 15px;
+      font-size: 17px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 160px;
+      padding: 12px;
+      line-height: 1.45;
+      font-size: 13px;
+    }
+
+    input:focus, textarea:focus { border-color: rgba(255, 45, 85, 0.7); box-shadow: 0 0 0 4px rgba(255,45,85,.14); }
+
+    .btn {
+      min-height: 46px;
+      border: 0;
+      border-radius: 8px;
+      color: white;
+      background: var(--hot);
+      padding: 0 16px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 0 34px rgba(255,45,85,.2);
+    }
+    .btn.secondary { background: rgba(255,255,255,.11); border: 1px solid var(--line); box-shadow: none; }
+    .btn.aqua { background: var(--aqua); color: #061016; box-shadow: 0 0 34px rgba(0,209,255,.17); }
+
+    .suggestions {
+      position: absolute;
+      z-index: 2000;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 114px;
+      max-height: 320px;
+      overflow: auto;
+      overscroll-behavior: contain;
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 10px;
+      background: #171419;
+      box-shadow: 0 26px 70px rgba(0,0,0,.72), 0 0 0 1px rgba(255,45,85,.08);
+      backdrop-filter: blur(24px);
+      padding: 7px;
+      display: none;
+      isolation: isolate;
+    }
+    .suggestions.open { display: block; }
+    .suggestion {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      text-align: left;
+      border: 0;
+      background: transparent;
+      color: white;
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      position: relative;
+      z-index: 1;
+    }
+    .suggestion:hover, .suggestion:focus-visible {
+      background: rgba(255,255,255,.12);
+      outline: none;
+    }
+    .suggestion small { color: var(--muted); display: block; margin-top: 2px; }
+    .suggestion-status {
+      padding: 11px 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .layout {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .side, .main { display: grid; gap: 16px; }
+    .panel { padding: 16px; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+      margin-top: 14px;
+    }
+    .stat {
+      background: rgba(255,255,255,.075);
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 74px;
+    }
+    .stat b { display: block; font-size: 22px; }
+    .stat span { color: var(--dim); font-size: 12px; }
+
+    .track-list {
+      max-height: 420px;
+      overflow: auto;
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+      padding-right: 4px;
+    }
+    .track-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      border-radius: 8px;
+      padding: 10px;
+      background: rgba(255,255,255,.055);
+    }
+    .title { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .artist { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .meta { color: var(--dim); font-size: 12px; text-align: right; white-space: nowrap; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.08);
+      border-radius: 7px;
+      padding: 2px 8px;
+      font-size: 12px;
+      font-weight: 800;
+      color: rgba(255,255,255,.82);
+    }
+    .badge.hot { color: var(--hot); border-color: rgba(255,45,85,.4); background: rgba(255,45,85,.1); }
+    .badge.aqua { color: var(--aqua); border-color: rgba(0,209,255,.4); background: rgba(0,209,255,.1); }
+    .badge.lime { color: var(--lime); border-color: rgba(182,255,77,.4); background: rgba(182,255,77,.1); }
+
+    .selected {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .tables {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 8px;
+      font-size: 13px;
+    }
+    th {
+      color: var(--dim);
+      font-size: 11px;
+      text-transform: uppercase;
+      text-align: left;
+      padding: 0 8px 3px;
+    }
+    td {
+      padding: 10px 8px;
+      background: rgba(255,255,255,.055);
+      vertical-align: middle;
+    }
+    td:first-child { border-radius: 8px 0 0 8px; }
+    td:last-child { border-radius: 0 8px 8px 0; }
+
+    .score {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .bar {
+      width: 62px;
+      height: 7px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,.1);
+    }
+    .fill { height: 100%; background: var(--hot); }
+    .fill.aqua { background: var(--aqua); }
+
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 120px 1fr 44px;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    .bar-row span:first-child { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .wheel {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .key {
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.055);
+      color: var(--dim);
+      font-weight: 900;
+      position: relative;
+    }
+    .key.active { color: var(--aqua); border-color: rgba(0,209,255,.45); }
+    .key.start { color: var(--hot); border-color: rgba(255,45,85,.65); box-shadow: inset 0 0 0 1px rgba(255,45,85,.25); }
+
+    .sets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .empty {
+      min-height: 440px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 24px;
+    }
+
+    .import-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 1180px) {
+      .layout, .tables, .charts, .sets { grid-template-columns: 1fr; }
+      .side { order: 2; }
+      .main { order: 1; }
+    }
+
+    @media (max-width: 720px) {
+      .app { padding: 10px; }
+      .search { grid-template-columns: 1fr; }
+      .suggestions { right: 0; top: calc(100% + 8px); max-height: min(360px, 55vh); }
+      .stats { grid-template-columns: 1fr; }
+      .wheel { grid-template-columns: repeat(4, 1fr); }
+      table { min-width: 780px; }
+      .table-wrap { overflow: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="glass top">
+      <div class="top-row">
+        <div>
+          <h1>Smart DJ Transition Finder</h1>
+          <p>Wpisz tytuł albo fragment. Różowe wyniki są z Twojej playlisty, niebieskie z trybu Whole.</p>
+        </div>
+        <div class="mode">
+          <span id="modeLabel" class="badge hot">Playlist Match</span>
+          <button id="modeSwitch" class="switch" type="button" aria-label="Przełącz tryb"><span></span></button>
+        </div>
+      </div>
+
+      <form id="searchForm" class="search">
+        <input id="query" autocomplete="off" placeholder="np. somwhe, Runaway, SICKO, PYSK, Sombrero" />
+        <button id="searchButton" class="btn" type="submit">Wyszukaj</button>
+        <div id="suggestions" class="suggestions"></div>
+      </form>
+    </section>
+
+    <div class="layout">
+      <aside class="side">
+        <section class="glass panel">
+          <div class="selected">
+            <h2>Baza playlisty</h2>
+            <span id="playlistCount" class="badge hot"></span>
+          </div>
+          <p>Wbudowana baza jest z Twoich screenshotów. Możesz dopisać swoje numery niżej.</p>
+          <div class="stats">
+            <div class="stat"><b id="avgBpm">0</b><span>średni BPM</span></div>
+            <div class="stat"><b id="avgEnergy">0</b><span>średnia energia</span></div>
+            <div class="stat"><b id="dominantKey">--</b><span>częsty Camelot</span></div>
+          </div>
+          <div id="playlistList" class="track-list"></div>
+        </section>
+
+        <section class="glass panel">
+          <h2>Dodaj tracki ręcznie</h2>
+          <p>Format: jeden utwór na linię, najlepiej `Tytuł - Artysta`.</p>
+          <textarea id="manualTracks" placeholder="Tytuł - Artysta&#10;np. Somewhere Over the Rainbow - Israel Kamakawiwo'ole"></textarea>
+          <div class="import-actions">
+            <button id="addManual" class="btn secondary" type="button">Dodaj</button>
+            <button id="resetPlaylist" class="btn secondary" type="button">Reset</button>
+          </div>
+          <div class="import-actions">
+            <button id="exportPlaylist" class="btn secondary" type="button">Eksport bazy</button>
+            <label class="btn secondary" style="display:grid;place-items:center;">
+              Import bazy
+              <input id="importPlaylist" type="file" accept=".json,application/json" style="display:none;" />
+            </label>
+          </div>
+        </section>
+      </aside>
+
+      <section class="main">
+        <section id="empty" class="glass empty">
+          <div>
+            <h2>Wybierz startowy utwór</h2>
+            <p>Po kliknięciu “Wyszukaj” zobaczysz najlepszy następny numer, Top 20 przejść, BPM, energię i Camelot Wheel.</p>
+          </div>
+        </section>
+
+        <section id="results" style="display:none; gap:16px;" class="main">
+          <section class="glass panel">
+            <div class="selected">
+              <div>
+                <span class="badge">utwór startowy</span>
+                <h2 id="selectedTitle" style="font-size:28px; margin-top:8px;"></h2>
+                <p id="selectedArtist"></p>
+              </div>
+              <div id="selectedChips" class="chips"></div>
+            </div>
+          </section>
+
+          <section class="glass panel">
+            <div class="selected">
+              <h2>Najlepszy następny</h2>
+              <span id="bestBadge" class="badge lime"></span>
+            </div>
+            <div class="stats">
+              <div class="stat"><b id="bestTitle" style="font-size:18px;"></b><span id="bestArtist"></span></div>
+              <div class="stat"><b id="bestScore"></b><span>match</span></div>
+              <div class="stat"><b id="bestMix"></b><span>jakość miksu</span></div>
+            </div>
+          </section>
+
+          <div class="tables">
+            <section class="glass panel">
+              <div class="selected"><h2>Dopasowania z playlisty</h2><span class="badge hot">Top 20</span></div>
+              <div class="table-wrap"><table id="playlistTable"></table></div>
+            </section>
+            <section class="glass panel">
+              <div class="selected"><h2>Whole / podobny klimat</h2><span class="badge aqua">Top 20</span></div>
+              <div class="table-wrap"><table id="wholeTable"></table></div>
+            </section>
+          </div>
+
+          <section class="glass panel">
+            <div class="selected"><h2>Najlepsze 5 przejść</h2><span class="badge lime">quick picks</span></div>
+            <div id="bestFive" class="stats"></div>
+          </section>
+
+          <div class="charts">
+            <section class="glass panel">
+              <h2>BPM flow</h2>
+              <div id="bpmChart"></div>
+            </section>
+            <section class="glass panel">
+              <h2>Energia przejścia</h2>
+              <div id="energyChart"></div>
+            </section>
+          </div>
+
+          <section class="glass panel">
+            <div class="selected"><h2>Camelot Wheel</h2><span class="badge">harmonic map</span></div>
+            <div id="camelotWheel" class="wheel"></div>
+          </section>
+
+          <div class="sets">
+            <section class="glass panel"><div class="selected"><h2>Mini-set 5</h2><span id="set5Score" class="badge lime"></span></div><div id="set5" class="track-list"></div></section>
+            <section class="glass panel"><div class="selected"><h2>Mini-set 10</h2><span id="set10Score" class="badge lime"></span></div><div id="set10" class="track-list"></div></section>
+          </div>
+        </section>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const rawPlaylist = [
+      ["IM NOT GOD BUT I WISH I WAS","smokedope2016"],["Pierwsze Koncerty","Monday Waxie"],["BACKROOMS","Playboi Carti & Travis Scott"],["antysemita","witchkilluh"],["BOMB","¥$, North West & Chicago West"],["2024","Playboi Carti"],["Thanks","Joeyy"],["B.O.R. (Birth of Rap)","Soulja Boy Tell 'Em & Lil B"],["Japonia (REMIX)","CBW, Mlody Korden, Cygan9 & 33ROBOT"],["SICKO MODE","Travis Scott"],["Lean 4 Real (feat. Skepta)","Playboi Carti"],["Runaway (feat. Pusha T)","Kanye West"],["myśli pułapki","Rusina, Lister & Bully"],["Wwa Na Kxxksie (feat. tosiek)","Yung Adisz, schafter & Gottastral"],["In the Air","Destroy Lonely"],["Pop","OsamaSon"],["No More Parties in LA","Kanye West"],["Wolves","Kanye West"],["Saint Pablo","Kanye West"],["QUEST","reeb"],["Feedback","Kanye West"],["MUNYUN","Playboi Carti"],["Coat I Would Buy","Joeyy"],["TALKING","¥$, Kanye West & Ty Dolla $ign"],["Byłem W Psychiatryku","Yung Adisz, Ozzy Baby & Okekel"],["Nienawidze Lata","Mlody Korden"],["Jakby Mogla Zabic1017","Mlody Korden"],["ANGELA","Mlody Korden"],["BlaBla","Mlody Korden, Cygan9 & Directed by Kooza"],["Miami","Mlody Korden, Worek & SB Maffija"],["Goyard Torba","Mlody Korden, Swizzy & pieruun"],["Ice Spice","Mlody Korden & Rotel Beatz"],["BUFFALO","Drabusheyka"],["slajm na bagu","Mlody Korden"],["margiela margiela 2","Mlody Korden"],["Nowy Worek","Cygan9, młody dymas & YEEGOR"],["Barbie (Remix)","Haranczykov, Cygan9 & MSF"],["stay humble","9ssey, Cygan9 & Kersie"],["Swag99","Cygan9 & młody dymas"],["Lody Genzie","Cygan9, młodszygibig & Haranczykov"],["BABY LOLA (ceskie divki)","spazma"],["DODO","Kamil"],["NA ROGU","Rusina, Lister & Learnhowtohustle"],["Muskrat (feat. Marlon DuBois)","Joeyy"],["BEIJING BOBO","spazma"],["UNDERARMOUR","Amar, maharadzza, Eddie Block, RICHIE & Adash"],["TERAZ WIEM FREESTYLE","wane"],["UNDERWAY CYPHER","UnderwayPL, luokhan, AG, Vorzu & GeezyBeatz"],["Na Haju","LHTH"],["zachod slonca","Mlody Korden"],["DOPE","spazma & izonya polska"],["CHUJ W TO","spazma"],["Wielkodupna Darianna","spazma"],["Mini Man","Okekel & Champion"],["KŁO PO TY","Kamil, ciaglamantra & atraxy"],["SILESIAN CYPHER","Okekel, Vkie, Aleshen & Miszel"],["Consequence","Rusina & Def Jam World Tour"],["Zapłakane matki","Yung Adisz, Rusina & Def Jam World Tour"],["DZIECIAKI to ROBIĄ","Kidzlori, Okekel & Champion"],["Zwolnij?","Okekel, Champion & Deemz"],["Wszystkim Czym Chcesz","wane"],["PO TAŃCU","Drabusheyka & Mlody West"],["Co jest?!","Mlody West & Drabusheyka"],["KOE-L SKYE","wane"],["Już nie mogę przegrać","Aleshen, Mlody West & BAHsick"],["co to znaczy","Kidzlori & Skibovicz"],["VULTURES","¥$, Kanye West & Ty Dolla $ign"],["Kiri Guap","Mlody Korden"],["You & Me (feat. Eliza Doolittle)","Disclosure"],["4 RANO","Rusina"],["Po Co?","wane"],["No morë talk","Yeat"],["unemployed anthem","maharadzza, Eddie Block & Adash"],["hebe","maharadzza & 1olliee"],["NA FORACH","Rusina & Young Igi"],["MOONDANCE","Drabusheyka & schafter"],["SEN","javier & gogetmxney"],["pierwsze molly to jak sen","LuKs & Kersie"],["CHCIAŁBYM BYĆ","LHTH & Sheder"],["Pudełka","Karus, javier & prod. adi"],["TU I TERAZZ","Drabusheyka & Żabson"],["JA = TY","Drabusheyka & Gmeniu"],["W PRIME","Drabusheyka"],["Break It Off","PinkPantheress"],["trzeźwym być","Rusina, Learnhowtohustle & nofuk"],["nowy $wag","Rusina, LHTH & Learnhowtohustle"],["LABUBU","javier & Kamil"],["Błoto","wane"],["Victory Lap Five","Fred again.., Skepta, PlaqueBoyMax & Denzel Curry"],["Alaa pt.1","Kamil"],["Monday Madness","Monday Waxie"],["DANCE FOR ME","Kamil"],["CHODZ ZE MNA NA GORE","Drabusheyka"],["PERSZING","LHTH"],["Splendor","wane"],["All Mine","Kanye West"],["AGAIN AND AGAIN","GABSON SAN"],["WIEM DOBRZE","Rusina & SHEDER"],["NARNIA","Kamil & Narri"],["Esskeetit","Lil Pump"],["Members Only Cypher","Rusina, Yung Adisz & Asster"],["Żale","Okekel"],["50 koła","Okekel, Mlody West & Nolyrics Beats"],["Kocham Cię","Okekel"],["Ain't No Shit","37Nestee, Ørzeł & 37 in this b!tch"],["eskeemos","schafter"],["ZEMSTA","Rusina, WHITE WIDOW & Vkie"],["po paru","podziemie fan"],["ZEBY ROZGRZAC WROCLAW","mlodykamil fan"],["SEKTOR | SPICY MIC Performance","Gryzzly & Myczu"],["Martin Shkreli Freestyle","schafter"],["Szara prawda","Okekel & Bonus RPK"],["TRYB SPORTOWY","javier & gogetmxney"],["DEAD","¥$, Future & Lil Durk"],["GO!","Rusina"],["ily denim","Denim Street"],["DM","Hubert."],["XXL","Trill Pem, Bully & Jezzy C."],["KUCHARZOWA","Mlody Korden"],["tańce","Hubert."],["Warszawski sen","Mlody West"],["YEAH!!! (feat. javier)","prod. adi, Karus & Kamil"],["g.i joe","podziemie fan"],["Mhm Mhm","Kidzlori"],["girl","2hollis"],["veteran","podziemie fan"],["Jestem W Stanie","Vkie & Pazzy"],["LEAK","Aleshen, Kamil & Macias"],["KULT","Mlody West & Okekel"],["Jurij Gagarin","Okekel"],["MVP","Okekel"],["Kodak","Okekel"],["Bez pokoju","Okekel"],["Rodo","Rusina & Learnhowtohustle"],["Bez Zmian","Aleshen"],["KLEOPATRA","Kidzlori"],["SALSA","javier"],["JAKOŚ JESTEM","Rusina"],["nina","ColdIone"],["cartier","Rusina & Learnhowtohustle"],["DOBRZE ZNAM SIĘ Z WITAMINĄ","hugevkie"],["PYSK","javier & gogetmxney"],["Zejść","wane"],["Gniazdo Freestyle","37Nestee, Ørzeł & 37 in this b!tch"],["On My Mind","37Nestee, Ørzeł & 37 in this b!tch"],["BIORE TO CO MOJE","G8KEEP VAULT"],["Truskulowy 2","Vkie"],["hcwd2","Lemik Golemik"],["Lookin (feat. Lil Uzi Vert)","Playboi Carti"],["CRUSH","Playboi Carti & Travis Scott"],["MOJO JOJO","Playboi Carti"],["SOMBRERO","LHTH, Stachu & Learnhowtohustle"],["MAM STYL","brokos"],["Rolling Stones","37 in this b!tch, 37Nestee & sz ymeh"],["bitch face","Monday Waxie"],["Szał","Vkie"],["LAST BREATH","Ye"],["LOSING YOUR MIND","Ye"],["365","Kidzlori"],["OCEAN SPRAY","Kidzlori"],["B2B","Kidzlori"],["KING","Kanye West"],["4X4","Travis Scott"],["twój plugg 2","Mlody Korden & Ozzy Baby"],["GDZIE JEST RUSINA","G8KEEP VAULT"],["FRED PERRY","Macias, WHITE WIDOW & RC"],["Luty","Otsochodzi"],["Maison Margiela","slowez"],["Rundki","Malik Montana"],["Plain Jane","Malik Montana"],["Bez Listy","Malik Montana & TYK"],["EFEKT KULI ŚNIEŻNEJ","Bonus RPK & Vkie"]
+    ];
+
+    const wholeCatalog = [
+      ["Somewhere Over the Rainbow","Israel Kamakawiwo'ole"],["Flashing Lights","Kanye West"],["Father Stretch My Hands Pt. 1","Kanye West"],["FE!N","Travis Scott & Playboi Carti"],["goosebumps","Travis Scott"],["Sky","Playboi Carti"],["Magnolia","Playboi Carti"],["Stop Breathing","Playboi Carti"],["Location","Playboi Carti"],["Praise God","Kanye West"],["Bound 2","Kanye West"],["Heartless","Kanye West"],["Money Trees","Kendrick Lamar"],["90210","Travis Scott"],["Just Wanna Rock","Lil Uzi Vert"],["XO Tour Llif3","Lil Uzi Vert"],["Miss The Rage","Trippie Redd & Playboi Carti"],["Yale","Ken Carson"],["Overseas","Ken Carson"],["If Looks Could Kill","Destroy Lonely"],["Bane","Destroy Lonely"],["Tell Em","Cochise & $NOT"],["Hotel Lobby","Quavo & Takeoff"],["Life Is Good","Future & Drake"],["Mask Off","Future"],["Back To The Basics","Future"],["Surround Sound","JID & 21 Savage"],["Sweet Disposition","The Temper Trap"],["Glue","Bicep"],["Rumble","Skrillex, Fred again.. & Flowdan"],["leavemealone","Fred again.. & Baby Keem"],["Jungle","Fred again.."],["Delilah","Fred again.."],["Latch","Disclosure & Sam Smith"],["White Noise","Disclosure"],["Attracted To You","PinkPantheress"],["Pain","PinkPantheress"],["Boys a liar Pt. 2","PinkPantheress & Ice Spice"]
+    ];
+
+    const CAMELOT = ["1A","2A","3A","4A","5A","6A","7A","8A","9A","10A","11A","12A","1B","2B","3B","4B","5B","6B","7B","8B","9B","10B","11B","12B"];
+    const keys = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+    const majorMap = ["8B","3B","10B","5B","12B","7B","2B","9B","4B","11B","6B","1B"];
+    const minorMap = ["5A","12A","7A","2A","9A","4A","11A","6A","1A","8A","3A","10A"];
+    const rapHints = ["kanye","playboi","travis","rusina","mlody","młody","okekel","javier","lil","yeat","wayne","malik","spazma","kamil","drabusheyka","37","kidzlori","carti","future"];
+    const clubHints = ["disclosure","fred again","pinkpantheress","dance","mode","party","tańce","break it off","bicep","skrillex"];
+    const sadHints = ["runaway","wolves","lata","cry","bez","ocean","last breath","losing","heartless"];
+
+    let playlist = loadPlaylist();
+    let selectedTrack = null;
+    let wholeMode = false;
+    let activeSuggestionIndex = -1;
+    let remoteSearchResults = [];
+    let searchTimer = null;
+    let searchRequestId = 0;
+    const searchCache = new Map();
+
+    function hash(input) {
+      let h = 2166136261;
+      for (let i = 0; i < input.length; i += 1) {
+        h ^= input.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    }
+    function clamp(v, min = 0, max = 1) { return Math.min(max, Math.max(min, v)); }
+    function norm(input) { return input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
+    function genreOf(text) {
+      const lower = norm(text);
+      if (clubHints.some(h => lower.includes(norm(h)))) return "club rap / electronic";
+      if (rapHints.some(h => lower.includes(norm(h)))) return "polish trap / rage rap";
+      return "alt rap";
+    }
+    function features(title, artist) {
+      const text = `${title} ${artist}`;
+      const h = hash(norm(text));
+      const jitter = shift => ((h >> shift) & 255) / 255;
+      const genre = genreOf(text);
+      const club = genre.includes("electronic");
+      const rap = genre.includes("rap") || genre.includes("trap");
+      const sad = sadHints.some(x => norm(text).includes(norm(x)));
+      const bpm = Math.round((club ? 126 : rap ? 142 : 116) + (jitter(0) - .5) * (club ? 18 : 28));
+      const keyIndex = h % 12;
+      const mode = sad || jitter(8) < .62 ? "minor" : "major";
+      const energy = clamp((club ? .76 : .66) + (jitter(16) - .5) * .34 - (sad ? .1 : 0));
+      const danceability = clamp((club ? .82 : .7) + (jitter(20) - .5) * .24);
+      const valence = clamp((sad ? .32 : .52) + (jitter(4) - .5) * .42);
+      const loudness = -1 * (5 + Math.round(jitter(6) * 80) / 10);
+      return {
+        bpm, key: keys[keyIndex], mode, camelot: mode === "major" ? majorMap[keyIndex] : minorMap[keyIndex],
+        energy, danceability, valence, loudness, genre,
+        introEnergy: clamp(energy - .14 + jitter(14) * .22),
+        outroEnergy: clamp(energy - .1 + jitter(18) * .26),
+        introLoudness: Math.max(-60, loudness - 1.5 + jitter(2) * 3),
+        outroLoudness: Math.max(-60, loudness - 1.8 + jitter(22) * 3.2)
+      };
+    }
+    function makeTrack(title, artist, source = "playlist") {
+      return { id: `${source}:${hash(`${title}:${artist}`)}`, title, artist, source, f: features(title, artist) };
+    }
+    function makeAppleTrack(item) {
+      const track = makeTrack(item.trackName || item.collectionName || "Unknown title", item.artistName || "Unknown artist", "apple");
+      track.id = `apple:${item.trackId || item.collectionId || hash(`${track.title}:${track.artist}`)}`;
+      track.album = item.collectionName || "";
+      track.artwork = item.artworkUrl100 || "";
+      track.previewUrl = item.previewUrl || "";
+      track.externalUrl = item.trackViewUrl || item.collectionViewUrl || "";
+      return track;
+    }
+    function loadPlaylist() {
+      const saved = localStorage.getItem("smartdj.playlist");
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+      return rawPlaylist.map(([t,a]) => makeTrack(t,a,"playlist"));
+    }
+    function savePlaylist() { localStorage.setItem("smartdj.playlist", JSON.stringify(playlist)); }
+    function dedupe(tracks) {
+      const map = new Map();
+      tracks.forEach(t => map.set(`${norm(t.title)}::${norm(t.artist)}`, t));
+      return [...map.values()];
+    }
+    function tokenScore(q, track) {
+      const query = norm(q);
+      const hay = norm(`${track.title} ${track.artist}`);
+      if (!query) return 0;
+      if (hay === query) return 1;
+      if (hay.includes(query)) return .92;
+      const tokens = query.split(/\s+/).filter(Boolean);
+      const hits = tokens.filter(t => hay.includes(t)).length;
+      return Math.min(1, hits / Math.max(1, tokens.length) * .66 + (norm(track.title).startsWith(query) ? .24 : 0));
+    }
+    function effectiveBpmDelta(a, b) {
+      return Math.min(Math.abs(a-b), Math.abs(a-b/2), Math.abs(a-b*2));
+    }
+    function parseCamelot(c) {
+      const m = /^(\d{1,2})([AB])$/.exec(c);
+      return { n: m ? Number(m[1]) : 8, l: m ? m[2] : "A" };
+    }
+    function wheelDistance(a, b) {
+      const x = parseCamelot(a), y = parseCamelot(b);
+      const raw = Math.abs(x.n - y.n);
+      return Math.min(raw, 12 - raw);
+    }
+    function harmonic(a, b) {
+      const x = parseCamelot(a), y = parseCamelot(b), d = wheelDistance(a,b);
+      if (a === b) return { score: 1, label: "same key", conflict: false };
+      if (d === 1 && x.l === y.l) return { score: .92, label: "adjacent Camelot", conflict: false };
+      if (x.n === y.n && x.l !== y.l) return { score: .88, label: "relative major/minor", conflict: false };
+      if (d === 2 && x.l === y.l) return { score: .76, label: "energy lift", conflict: false };
+      if (d === 1 && x.l !== y.l) return { score: .62, label: "soft blend", conflict: false };
+      return { score: d === 3 ? .34 : .18, label: d === 3 ? "tension" : "harmonic clash", conflict: true };
+    }
+    function sim(delta, tolerance) { return clamp(1 - Math.abs(delta) / tolerance); }
+    function genreSim(a,b) {
+      const A = new Set(norm(a).split(/[^a-z0-9ąćęłńóśźż]+/).filter(Boolean));
+      const B = new Set(norm(b).split(/[^a-z0-9ąćęłńóśźż]+/).filter(Boolean));
+      const inter = [...A].filter(x => B.has(x)).length;
+      return inter / Math.max(1, new Set([...A,...B]).size);
+    }
+    function score(from, to) {
+      const h = harmonic(from.f.camelot, to.f.camelot);
+      const bpmDelta = Math.abs(from.f.bpm - to.f.bpm);
+      const effectiveDelta = effectiveBpmDelta(from.f.bpm, to.f.bpm);
+      const bpm = sim(effectiveDelta, 18);
+      const energy = sim(from.f.outroEnergy - to.f.introEnergy, .46);
+      const loud = sim(from.f.outroLoudness - to.f.introLoudness, 8);
+      const genre = genreSim(from.f.genre, to.f.genre);
+      const valence = sim(from.f.valence - to.f.valence, .55);
+      const phrase = clamp(energy * .45 + loud * .25 + valence * .2 + to.f.danceability * .1);
+      const penalty = h.conflict ? .14 : 0;
+      const total = Math.round(clamp(h.score*.35 + bpm*.25 + energy*.2 + genre*.1 + loud*.1 + phrase*.05 - penalty) * 100);
+      const quality = total >= 88 && !h.conflict ? "idealne" : total >= 74 && !h.conflict ? "czyste" : total >= 58 ? "ryzykowne" : "konflikt";
+      return { from, to, score: total, bpmDelta, effectiveDelta: Number(effectiveDelta.toFixed(1)), key: h.label, conflict: h.conflict, quality, crossfade: Math.round(clamp(6 + (1 - effectiveDelta/18)*6 + energy*3, 4, 14)) };
+    }
+    function rank(from, candidates, limit = 20) {
+      return candidates.filter(t => t.id !== from.id).map(t => score(from,t)).sort((a,b) => b.score - a.score).slice(0, limit);
+    }
+    function buildSet(from, candidates, size) {
+      const chosen = [from], transitions = [];
+      let pool = candidates.filter(t => t.id !== from.id);
+      while (chosen.length < size && pool.length) {
+        const current = chosen[chosen.length - 1];
+        const best = rank(current, pool, 8).map(r => ({ r, v: r.score - (chosen.some(t => t.artist === r.to.artist) ? 6 : 0) + r.to.f.danceability*3 })).sort((a,b) => b.v - a.v)[0].r;
+        chosen.push(best.to);
+        transitions.push(best);
+        pool = pool.filter(t => t.id !== best.to.id);
+      }
+      return { tracks: chosen, avg: transitions.length ? Math.round(transitions.reduce((s,r)=>s+r.score,0)/transitions.length) : 0 };
+    }
+
+    function renderPlaylist() {
+      playlist = dedupe(playlist);
+      savePlaylist();
+      document.getElementById("playlistCount").textContent = `${playlist.length} utworów`;
+      const avg = Math.round(playlist.reduce((s,t)=>s+t.f.bpm,0)/playlist.length);
+      const energy = Math.round(playlist.reduce((s,t)=>s+t.f.energy,0)/playlist.length*100);
+      const counts = {};
+      playlist.forEach(t => counts[t.f.camelot] = (counts[t.f.camelot] || 0) + 1);
+      document.getElementById("avgBpm").textContent = avg;
+      document.getElementById("avgEnergy").textContent = energy;
+      document.getElementById("dominantKey").textContent = Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+      document.getElementById("playlistList").innerHTML = playlist.slice(0,90).map(t => trackRow(t)).join("");
+    }
+    function trackRow(t) {
+      return `<div class="track-row"><div><div class="title">${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div></div><div class="meta">${Math.round(t.f.bpm)}<br>${t.f.camelot}</div></div>`;
+    }
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
+    }
+    function getLocalSuggestions(q) {
+      const localCatalog = dedupe([...playlist, ...wholeCatalog.map(([t,a]) => makeTrack(t,a,"whole"))]);
+      return localCatalog
+        .map(t => ({t, s: tokenScore(q,t)}))
+        .filter(x => x.s > .16)
+        .sort((a,b)=>b.s-a.s)
+        .slice(0,8)
+        .map(x => x.t);
+    }
+    function renderSuggestionItems(q, isLoading = false) {
+      const box = document.getElementById("suggestions");
+      const local = getLocalSuggestions(q);
+      const merged = dedupe([...local, ...remoteSearchResults]).slice(0,12);
+      if (!merged.length && isLoading) {
+        box.innerHTML = `<div class="suggestion-status">Szukam w Apple Music...</div>`;
+        box.classList.add("open");
+        return;
+      }
+      if (!merged.length) {
+        box.innerHTML = `<div class="suggestion-status">Brak wyników. Naciśnij Enter, aby przeanalizować wpisany tytuł.</div>`;
+        box.classList.add("open");
+        return;
+      }
+      box.innerHTML = merged.map(t => `<button class="suggestion" type="button" data-id="${t.id}"><span><b>${esc(t.title)}</b><small>${esc(t.artist)}${t.album ? ` · ${esc(t.album)}` : ""}</small></span><span class="badge ${t.source === "playlist" || t.source === "manual" ? "hot" : "aqua"}">${t.source === "apple" ? "Apple" : t.source === "playlist" || t.source === "manual" ? "Playlist" : "Katalog"}</span></button>`).join("");
+      box.classList.add("open");
+      box.querySelectorAll("button").forEach(btn => btn.addEventListener("click", () => {
+        const found = merged.find(t => t.id === btn.dataset.id);
+        if (!found) return;
+        selectedTrack = found;
+        document.getElementById("query").value = `${found.title} - ${found.artist}`;
+        box.classList.remove("open");
+      }));
+    }
+    function searchAppleMusic(q) {
+      const normalizedQuery = norm(q);
+      if (searchCache.has(normalizedQuery)) {
+        remoteSearchResults = searchCache.get(normalizedQuery);
+        renderSuggestionItems(q);
+        return;
+      }
+      const requestId = ++searchRequestId;
+      const callbackName = `smartDjAppleSearch${requestId}`;
+      const script = document.createElement("script");
+      const cleanup = () => {
+        delete window[callbackName];
+        script.remove();
+      };
+      const timeout = setTimeout(() => {
+        if (requestId === searchRequestId) renderSuggestionItems(q);
+        cleanup();
+      }, 7000);
+      window[callbackName] = payload => {
+        clearTimeout(timeout);
+        if (requestId !== searchRequestId) {
+          cleanup();
+          return;
+        }
+        remoteSearchResults = dedupe((payload.results || []).filter(item => item.trackName && item.artistName).map(makeAppleTrack));
+        searchCache.set(normalizedQuery, remoteSearchResults);
+        renderSuggestionItems(q);
+        cleanup();
+      };
+      script.onerror = () => {
+        clearTimeout(timeout);
+        if (requestId === searchRequestId) renderSuggestionItems(q);
+        cleanup();
+      };
+      script.src = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&country=PL&media=music&entity=song&limit=12&explicit=Yes&callback=${callbackName}`;
+      document.head.appendChild(script);
+    }
+    function renderSuggestions() {
+      const q = document.getElementById("query").value;
+      const box = document.getElementById("suggestions");
+      activeSuggestionIndex = -1;
+      clearTimeout(searchTimer);
+      if (q.trim().length < 2) {
+        remoteSearchResults = [];
+        box.classList.remove("open");
+        return;
+      }
+      remoteSearchResults = [];
+      renderSuggestionItems(q, true);
+      searchTimer = setTimeout(() => searchAppleMusic(q), 420);
+    }
+    function moveSuggestion(direction) {
+      const box = document.getElementById("suggestions");
+      const buttons = [...box.querySelectorAll(".suggestion")];
+      if (!box.classList.contains("open") || !buttons.length) return false;
+      activeSuggestionIndex = (activeSuggestionIndex + direction + buttons.length) % buttons.length;
+      buttons.forEach((button, index) => {
+        button.style.background = index === activeSuggestionIndex ? "rgba(255,255,255,.14)" : "";
+      });
+      buttons[activeSuggestionIndex].scrollIntoView({ block: "nearest" });
+      return true;
+    }
+    function findSelected(q) {
+      if (selectedTrack) return selectedTrack;
+      const all = dedupe([...playlist, ...remoteSearchResults, ...wholeCatalog.map(([t,a]) => makeTrack(t,a,"whole"))]);
+      return all.map(t => ({t, s: tokenScore(q,t)})).sort((a,b)=>b.s-a.s)[0]?.t || makeTrack(q, "Unknown artist", "manual");
+    }
+    function runSearch(event) {
+      event.preventDefault();
+      const q = document.getElementById("query").value.trim();
+      if (!q) return;
+      const from = findSelected(q);
+      selectedTrack = from;
+      const wholeTracks = wholeCatalog.map(([t,a]) => makeTrack(t,a,"whole"));
+      const playlistMatches = rank(from, playlist, 20);
+      const wholeMatches = rank(from, dedupe([...remoteSearchResults, ...wholeTracks, ...playlist.slice(0, 35)]), 20);
+      const active = wholeMode ? wholeMatches : playlistMatches;
+      const best = active[0] || playlistMatches[0] || wholeMatches[0];
+      const set5 = buildSet(from, wholeMode ? dedupe([...playlist, ...remoteSearchResults, ...wholeTracks]) : playlist, 5);
+      const set10 = buildSet(from, wholeMode ? dedupe([...playlist, ...remoteSearchResults, ...wholeTracks]) : playlist, 10);
+      renderResults(from, best, playlistMatches, wholeMatches, active, set5, set10);
+    }
+    function renderResults(from, best, playlistMatches, wholeMatches, active, set5, set10) {
+      document.getElementById("empty").style.display = "none";
+      document.getElementById("results").style.display = "grid";
+      document.getElementById("selectedTitle").textContent = from.title;
+      document.getElementById("selectedArtist").textContent = from.artist;
+      document.getElementById("selectedChips").innerHTML = [`${from.f.bpm} BPM`, from.f.camelot, from.f.genre, `${Math.round(from.f.energy*100)} energy`].map(x => `<span class="badge">${esc(x)}</span>`).join("");
+      document.getElementById("bestBadge").textContent = `${best.score}%`;
+      document.getElementById("bestTitle").textContent = best.to.title;
+      document.getElementById("bestArtist").textContent = best.to.artist;
+      document.getElementById("bestScore").textContent = `${best.score}%`;
+      document.getElementById("bestMix").textContent = best.quality;
+      document.getElementById("playlistTable").innerHTML = renderTable(playlistMatches, "hot");
+      document.getElementById("wholeTable").innerHTML = renderTable(wholeMatches, "aqua");
+      document.getElementById("bestFive").innerHTML = active.slice(0,5).map(r => `<div class="stat"><b style="color:var(--lime)">${r.score}%</b><span>${esc(r.to.title)}<br>${esc(r.to.artist)}</span></div>`).join("");
+      renderChart("bpmChart", [from, ...active.slice(0,9).map(r=>r.to)], "bpm");
+      renderChart("energyChart", [from, ...active.slice(0,9).map(r=>r.to)], "energy");
+      renderWheel(from, active);
+      renderSet("set5", "set5Score", set5);
+      renderSet("set10", "set10Score", set10);
+    }
+    function renderTable(matches, color) {
+      const cls = color === "aqua" ? "aqua" : "";
+      return `<thead><tr><th>#</th><th>Utwór</th><th>Match</th><th>BPM</th><th>Key</th><th>Mix</th></tr></thead><tbody>${matches.map((r,i)=>`<tr><td>${i+1}</td><td><div class="title">${esc(r.to.title)}</div><div class="artist">${esc(r.to.artist)}</div></td><td><div class="score"><div class="bar"><div class="fill ${cls}" style="width:${r.score}%"></div></div>${r.score}%</div></td><td>${Math.round(r.to.f.bpm)}<div class="artist">Δ ${r.effectiveDelta}</div></td><td><span class="badge">${r.to.f.camelot}</span><div class="artist">${r.key}</div></td><td><b>${r.quality}</b><div class="artist">${r.crossfade}s crossfade</div></td></tr>`).join("")}</tbody>`;
+    }
+    function renderChart(id, tracks, kind) {
+      const max = kind === "bpm" ? Math.max(160, ...tracks.map(t=>t.f.bpm)) : 1;
+      document.getElementById(id).innerHTML = tracks.map((t,i) => {
+        const val = kind === "bpm" ? t.f.bpm : t.f.energy;
+        const pct = kind === "bpm" ? val / max * 100 : val * 100;
+        const color = kind === "bpm" ? "var(--hot)" : "var(--aqua)";
+        return `<div class="bar-row"><span>${i===0 ? "START" : esc(t.title)}</span><div class="bar" style="width:100%;height:10px"><div class="fill" style="width:${pct}%;background:${color}"></div></div><b>${kind === "bpm" ? Math.round(val) : Math.round(val*100)}</b></div>`;
+      }).join("");
+    }
+    function renderWheel(from, matches) {
+      const active = new Set(matches.slice(0,20).map(r=>r.to.f.camelot));
+      document.getElementById("camelotWheel").innerHTML = CAMELOT.map(k => `<div class="key ${from.f.camelot===k ? "start" : active.has(k) ? "active" : ""}">${k}</div>`).join("");
+    }
+    function renderSet(id, scoreId, set) {
+      document.getElementById(scoreId).textContent = `${set.avg}% avg`;
+      document.getElementById(id).innerHTML = set.tracks.map((t,i) => `<div class="track-row"><div><div class="title">${i+1}. ${esc(t.title)}</div><div class="artist">${esc(t.artist)}</div></div><div class="meta">${t.f.camelot}<br>${Math.round(t.f.bpm)}</div></div>`).join("");
+    }
+
+    document.getElementById("query").addEventListener("input", () => { selectedTrack = null; renderSuggestions(); });
+    document.getElementById("query").addEventListener("keydown", event => {
+      if (event.key === "ArrowDown" && moveSuggestion(1)) {
+        event.preventDefault();
+      } else if (event.key === "ArrowUp" && moveSuggestion(-1)) {
+        event.preventDefault();
+      } else if (event.key === "Enter" && activeSuggestionIndex >= 0) {
+        const buttons = document.querySelectorAll("#suggestions .suggestion");
+        const active = buttons[activeSuggestionIndex];
+        if (active) {
+          event.preventDefault();
+          active.click();
+        }
+      } else if (event.key === "Escape") {
+        document.getElementById("suggestions").classList.remove("open");
+        activeSuggestionIndex = -1;
+      }
+    });
+    document.getElementById("searchForm").addEventListener("submit", runSearch);
+    document.getElementById("modeSwitch").addEventListener("click", () => {
+      wholeMode = !wholeMode;
+      document.getElementById("modeSwitch").dataset.whole = String(wholeMode);
+      document.getElementById("modeLabel").textContent = wholeMode ? "Whole" : "Playlist Match";
+      document.getElementById("modeLabel").className = `badge ${wholeMode ? "aqua" : "hot"}`;
+      document.getElementById("searchButton").className = `btn ${wholeMode ? "aqua" : ""}`;
+    });
+    document.getElementById("addManual").addEventListener("click", () => {
+      const lines = document.getElementById("manualTracks").value.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+      const added = lines.map(line => {
+        const parts = line.split(/\s+-\s+/);
+        return makeTrack(parts[0] || line, parts.slice(1).join(" - ") || "Unknown artist", "manual");
+      });
+      playlist = dedupe([...playlist, ...added]);
+      document.getElementById("manualTracks").value = "";
+      renderPlaylist();
+    });
+    document.getElementById("resetPlaylist").addEventListener("click", () => {
+      playlist = rawPlaylist.map(([t,a]) => makeTrack(t,a,"playlist"));
+      savePlaylist();
+      renderPlaylist();
+    });
+    document.getElementById("exportPlaylist").addEventListener("click", () => {
+      const payload = JSON.stringify({
+        app: "Smart DJ Transition Finder",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        tracks: playlist
+      }, null, 2);
+      const blob = new Blob([payload], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "smart-dj-playlista.json";
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
+    document.getElementById("importPlaylist").addEventListener("change", event => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result));
+          const tracks = Array.isArray(parsed) ? parsed : parsed.tracks;
+          if (!Array.isArray(tracks)) throw new Error("Nieprawidłowy format");
+          playlist = dedupe(tracks.map(item => makeTrack(item.title, item.artist, item.source || "import")));
+          renderPlaylist();
+        } catch {
+          alert("Nie udało się zaimportować tej bazy.");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = "";
+    });
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".search")) document.getElementById("suggestions").classList.remove("open");
+    });
+
+    renderPlaylist();
+
+    if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

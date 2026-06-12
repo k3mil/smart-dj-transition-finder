@@ -1,0 +1,11 @@
+{
+  "name": "@smart-dj/database",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "echo schema-only",
+    "typecheck": "echo schema-only",
+    "lint": "echo schema-only"
+  }
+}
